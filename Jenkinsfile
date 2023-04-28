@@ -2,7 +2,7 @@ pipeline {
     environment {
         registryCredential = 'dockerhub-credentials'
         dockerImage = ''
-        DOCKER_REGISTRY = 'registry.hub.docker.com'
+        registry = 'registry.hub.docker.com'
         DOCKER_USERNAME = credentials('barrydj').USAGER
         DOCKER_PASSWORD = credentials('Md005185++').MOT_DE_PASSE
     }
@@ -16,7 +16,7 @@ pipeline {
         stage('Build image') {
             steps{
                 script {
-                    dockerImage = docker.build registry + '/test/http2'
+                    dockerImage = docker.build "${registry}/test/http2"
                 }
             }
         }
