@@ -17,7 +17,7 @@ pipeline {
         }
         stage('Checkout') {
             steps {
-                checkout([$class: 'GitSCM', branches: [[name: '/master']], userRemoteConfigs: [[url: 'https://github.com/barry03/Broker_Kafka.git']]])
+                checkout([$class: 'GitSCM', branches: [[name: '/main']], userRemoteConfigs: [[url: 'https://github.com/barry03/Broker_Kafka.git']]])
             }
         }
         stage('Build Docker image') {
