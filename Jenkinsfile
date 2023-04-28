@@ -1,54 +1,57 @@
+https://github.com/barry03/Broker_Kafka.git
+
 pipeline {
-    agent any
-    environment {
-        DOCKER_REGISTRY = "docker.io"
-        DOCKER_USERNAME = "barrydj"
-        DOCKER_PASSWORD = "Md005185++"
-        PATH = "/usr/local/bin:${PATH}"
+
+  environment {
+    dockerimagename = "test/http2"
+    dockerImage = ""
+  }
+
+  agent any
+
+  stages {
+
+    stage('Checkout Source') {
+      steps {
+        git 'https://github.com/barry03/Broker_Kafka.git'
+      }
     }
-    stages {
-        stage('Test') {
-            steps {
-                sh """
-                echo 'DOCKER_REGISTRY: ${DOCKER_REGISTRY}'
-                echo "DOCKER_USERNAME: ${DOCKER_USERNAME}"
-                echo "DOCKER_PASSWORD: ${DOCKER_PASSWORD}"
-                """
-            }
+
+    stage('Build image') {
+      steps{
+        script {
+          dockerImage = docker.build dockerimagename
         }
-        stage('Checkout') {
-            steps {
-                checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://gitlab.com/barrydjoulde/patient-zero.git']]])
-            }
+      }
+    }
+
+    stage('Pushing Image') {
+      environment {
+               registryCredential = 'dockerhub-credentials'
+           }
+      steps{
+        script {
+          docker.withRegistry( 'https://registry.hub.docker.com', registryCredential ) {
+            dockerImage.push("latest")
+          }
         }
-        stage('Build Docker image') {
-            steps {
-                script {
-                    sh "/usr/local/bin/docker build -t ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID} -f Dockerfile ."
-                }
-            }
-        }
-        stage('Push Docker image') {
-            steps {
-                script {
-                    sh "docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} && docker push ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}"
-                }
-            }
-        }
-        stage('Deploy to Kubernetes') {
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
             steps {
                 script {
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                         kubernetesDeploy(
                             kubeconfigId: "${KUBECONFIG}",
-                            configs: 'kube/*.yml'
+                            configs: 'kube/.yml'
                         )
                     }
                 }
             }
         }
-    }
     options {
         disableConcurrentBuilds()
     }
+
 }
