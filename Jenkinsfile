@@ -4,7 +4,7 @@ pipeline {
         dockerImage = ''
         registry = 'registry.hub.docker.com'
         DOCKER_USERNAME = credentials('barrydj').USAGER.toString()
-        DOCKER_PASSWORD = credentials('barrydj').getSecret().toString()
+        DOCKER_PASSWORD = credentials('barrydj').getPassword().toString()
 
     }
     agent any
