@@ -3,8 +3,9 @@ pipeline {
         registryCredential = 'dockerhub-credentials'
         dockerImage = ''
         registry = 'registry.hub.docker.com'
-        DOCKER_USERNAME = credentials('barrydj').USAGER
-        DOCKER_PASSWORD = credentials('Md005185++').MOT_DE_PASSE
+        DOCKER_USERNAME = credentials('barrydj').getUsername()
+        DOCKER_PASSWORD = credentials('Md005185++').getPassword()
+
     }
     agent any
     stages {
