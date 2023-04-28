@@ -1,16 +1,19 @@
 pipeline {
     agent any
+    environment {
+        DOCKER_REGISTRY = "docker.io"
+        DOCKER_USERNAME = "barrydj"
+        DOCKER_PASSWORD = "Md005185++"
+        PATH = "/usr/local/bin:${PATH}"
+    }
     stages {
         stage('Test') {
             steps {
-                withCredentials([string(credentialsId: '2116282e-da84-4b87-9c40-db338284b66e', variable: 'DOCKER_USERNAME'), string(credentialsId: 'admin1', variable: 'DOCKER_PASSWORD'), file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh """
-                    echo 'DOCKER_REGISTRY: docker.io'
-                    echo "DOCKER_USERNAME: \${DOCKER_USERNAME}"
-                    echo "DOCKER_PASSWORD: \${DOCKER_PASSWORD}"
-                    echo "KUBECONFIG: \${KUBECONFIG}"
-                    """
-                }
+                sh """
+                echo 'DOCKER_REGISTRY: ${DOCKER_REGISTRY}'
+                echo "DOCKER_USERNAME: ${DOCKER_USERNAME}"
+                echo "DOCKER_PASSWORD: ${DOCKER_PASSWORD}"
+                """
             }
         }
         stage('Checkout') {
@@ -18,32 +21,29 @@ pipeline {
                 checkout([$class: 'GitSCM', branches: [[name: '*/master']], userRemoteConfigs: [[url: 'https://gitlab.com/barrydjoulde/patient-zero.git']]])
             }
         }
-        
         stage('Build Docker image') {
             steps {
                 script {
-                    docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}", "-f Dockerfile .")
+                    sh "/usr/local/bin/docker build -t ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID} -f Dockerfile ."
                 }
             }
         }
-        
         stage('Push Docker image') {
             steps {
                 script {
-                    docker.withRegistry("${DOCKER_REGISTRY}", 'docker-hub-credentials') {
-                        docker.image("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}").push()
-                    }
+                    sh "docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD} && docker push ${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}"
                 }
             }
         }
-        
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    kubernetesDeploy(
-                        kubeconfigId: "${KUBECONFIG}",
-                        configs: 'kube/*.yml'
-                    )
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                        kubernetesDeploy(
+                            kubeconfigId: "${KUBECONFIG}",
+                            configs: 'kube/*.yml'
+                        )
+                    }
                 }
             }
         }
