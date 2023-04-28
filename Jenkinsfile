@@ -1,30 +1,37 @@
 pipeline {
-    environment {
-        registryCredential = 'dockerhub-credentials'
-        dockerImage = ''
-        registry = 'registry.hub.docker.com'
-        DOCKER_USERNAME = credentials('barrydj').USAGER.toString()
-        DOCKER_PASSWORD = credentials('barrydj').getSecret().getPlainText()
-    }
     agent any
+    environment {
+        DOCKER_REGISTRY = "docker.io"
+        DOCKER_USERNAME = "barrydj"
+        DOCKER_PASSWORD = "Md005185++"
+    }
     stages {
-        stage('Checkout Source') {
+        stage('Test') {
             steps {
-                git 'https://github.com/barry03/Broker_Kafka.git'
+                sh """
+                echo 'DOCKER_REGISTRY: ${DOCKER_REGISTRY}'
+                echo "DOCKER_USERNAME: ${DOCKER_USERNAME}"
+                echo "DOCKER_PASSWORD: ${DOCKER_PASSWORD}"
+                """
             }
         }
-        stage('Build image') {
-            steps{
+        stage('Checkout') {
+            steps {
+                checkout([$class: 'GitSCM', branches: [[name: '/master']], userRemoteConfigs: [[url: 'https://gitlab.com/barrydjoulde/patient-zero.git']]])
+            }
+        }
+        stage('Build Docker image') {
+            steps {
                 script {
-                    dockerImage = docker.build "${registry}/test/http2"
+                    docker.build("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}", "-f Dockerfile .")
                 }
             }
         }
-        stage('Pushing Image') {
-            steps{
+        stage('Push Docker image') {
+            steps {
                 script {
-                    docker.withRegistry( registry, registryCredential ) {
-                        dockerImage.push("latest")
+                    docker.withRegistry("${DOCKER_REGISTRY}", "${DOCKER_USERNAME}", "${DOCKER_PASSWORD}") {
+                        docker.image("${DOCKER_REGISTRY}/${DOCKER_USERNAME}/http2:${env.BUILD_ID}").push()
                     }
                 }
             }
@@ -35,7 +42,7 @@ pipeline {
                     withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                         kubernetesDeploy(
                             kubeconfigId: "${KUBECONFIG}",
-                            configs: 'kube/*.yml'
+                            configs: 'kube/.yml'
                         )
                     }
                 }
